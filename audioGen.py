@@ -3,7 +3,7 @@ import os
 import re
 import torch
 import torchaudio
-
+import shutil
 from tortoise.api import TextToSpeech, MODELS_DIR
 from tortoise.utils.audio import load_voices
 
@@ -14,6 +14,7 @@ print(torch.version.cuda)
 
 RESULTFOLDER = 'results/'
 TEXTFOLDER = "textFiles/"
+TEXTCOMPLETE = "textComplete/"
 
 
 # parser = argparse.ArgumentParser()
@@ -87,7 +88,8 @@ abbreviations_dict = {
 onlyfiles = os.listdir(TEXTFOLDER)
 print(onlyfiles)
 if len(onlyfiles) > 0:
-    with open(os.path.join(TEXTFOLDER, onlyfiles[0])) as file:
+    filename = onlyfiles[0]
+    with open(os.path.join(TEXTFOLDER, filename)) as file:
         sayString = file.read()
 
         for x in abbreviations_dict:
@@ -118,3 +120,7 @@ if len(onlyfiles) > 0:
         #     if args.produce_debug_state:
         #             os.makedirs('debug_states', exist_ok=True)
         #             torch.save(dbg_state, f'debug_states/do_tts_debug_{selected_voice}.pth')
+
+        file.close()
+        
+    shutil.move(os.path.join(TEXTFOLDER, filename), os.path.join(TEXTCOMPLETE, filename))
