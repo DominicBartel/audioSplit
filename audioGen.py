@@ -103,7 +103,7 @@ def tryParse():
                 sayString = sayString.lower().replace(" " + x.lower() + "!", abbreviations_dict[x].lower() )
 
             for x in swaer:
-                sayString = sayString.lower().replace(x.lower(), abbreviations_dict[x].lower() )
+                sayString = sayString.lower().replace(x.lower(), swaer[x].lower() )
             
             allStrings = re.split("\.|\?|\!|\r|\n", sayString)
 
