@@ -6,7 +6,7 @@ import torchaudio
 import shutil
 from tortoise.api import TextToSpeech, MODELS_DIR
 from tortoise.utils.audio import load_voices
-
+import sched, time
 import torch 
 print(torch.cuda.is_available()) 
 print(torch.cuda.get_device_name(0))
@@ -85,42 +85,54 @@ abbreviations_dict = {
 # os.makedirs(args.output_path, exist_ok=True)
 # tts = TextToSpeech(models_dir=args.model_dir, use_deepspeed=args.use_deepspeed, kv_cache=args.kv_cache, half=args.half)
 
-onlyfiles = os.listdir(TEXTFOLDER)
-print(onlyfiles)
-if len(onlyfiles) > 0:
-    filename = onlyfiles[0]
-    with open(os.path.join(TEXTFOLDER, filename)) as file:
-        sayString = file.read()
+def tryParse():
+    onlyfiles = os.listdir(TEXTFOLDER)
+    print("Files in dir: " + str(len(onlyfiles)))
+    if len(onlyfiles) > 0:
+        filename = onlyfiles[0]
+        with open(os.path.join(TEXTFOLDER, filename)) as file:
+            sayString = file.read()
 
-        for x in abbreviations_dict:
-            sayString = sayString.lower().replace(" " + x.lower() + " ", abbreviations_dict[x].lower() )
-            sayString = sayString.lower().replace(" " + x.lower() + "?", abbreviations_dict[x].lower() )
-            sayString = sayString.lower().replace(" " + x.lower() + ".", abbreviations_dict[x].lower() )
-            sayString = sayString.lower().replace(" " + x.lower() + "!", abbreviations_dict[x].lower() )
+            for x in abbreviations_dict:
+                sayString = sayString.lower().replace(" " + x.lower() + " ", abbreviations_dict[x].lower() )
+                sayString = sayString.lower().replace(" " + x.lower() + "?", abbreviations_dict[x].lower() )
+                sayString = sayString.lower().replace(" " + x.lower() + ".", abbreviations_dict[x].lower() )
+                sayString = sayString.lower().replace(" " + x.lower() + "!", abbreviations_dict[x].lower() )
 
-        print(sayString)
-        allStrings = re.split("\.|\?|\!|\r|\n", sayString)
-        for x in allStrings:
-            print("\n")
-            print(x)
-        print(allStrings)
+            print(sayString)
+            allStrings = re.split("\.|\?|\!|\r|\n", sayString)
+            print(allStrings)
+            while("" in allStrings):
+                allStrings.remove("")
+            print(allStrings)
+            # selected_voice = ["train_lescault","train_dreams"]
+            # voice_samples, conditioning_latents = load_voices(selected_voice)
 
-        # selected_voice = ["train_lescault","train_dreams"]
-        # voice_samples, conditioning_latents = load_voices(selected_voice)
+            # for k, string in enumerate(allStrings):
+            #     gen, dbg_state = tts.tts_with_preset(string, k=args.candidates, voice_samples=voice_samples, conditioning_latents=conditioning_latents,
+            #                                     preset=args.preset, use_deterministic_seed=args.seed, return_deterministic_state=True, cvvp_amount=args.cvvp_amount)
+            #     if isinstance(gen, list):
+            #         for j, g in enumerate(gen):
+            #             torchaudio.save(os.path.join(args.output_path, f'{k}_{selected_voice}_{j}.wav'), g.squeeze(0).cpu(), 24000)
+            #     else:
+            #         torchaudio.save(os.path.join(args.output_path, f'{k}_{selected_voice}_.wav'), gen.squeeze(0).cpu(), 24000)
 
-        # for k, string in enumerate(allStrings):
-        #     gen, dbg_state = tts.tts_with_preset(string, k=args.candidates, voice_samples=voice_samples, conditioning_latents=conditioning_latents,
-        #                                     preset=args.preset, use_deterministic_seed=args.seed, return_deterministic_state=True, cvvp_amount=args.cvvp_amount)
-        #     if isinstance(gen, list):
-        #         for j, g in enumerate(gen):
-        #             torchaudio.save(os.path.join(args.output_path, f'{k}_{selected_voice}_{j}.wav'), g.squeeze(0).cpu(), 24000)
-        #     else:
-        #         torchaudio.save(os.path.join(args.output_path, f'{k}_{selected_voice}_.wav'), gen.squeeze(0).cpu(), 24000)
+            #     if args.produce_debug_state:
+            #             os.makedirs('debug_states', exist_ok=True)
+            #             torch.save(dbg_state, f'debug_states/do_tts_debug_{selected_voice}.pth')
 
-        #     if args.produce_debug_state:
-        #             os.makedirs('debug_states', exist_ok=True)
-        #             torch.save(dbg_state, f'debug_states/do_tts_debug_{selected_voice}.pth')
+            file.close()
 
-        file.close()
-        
-    shutil.move(os.path.join(TEXTFOLDER, filename), os.path.join(TEXTCOMPLETE, filename))
+        shutil.move(os.path.join(TEXTFOLDER, filename), os.path.join(TEXTCOMPLETE, filename))
+    if len(onlyfiles) > 0:
+        tryParse()
+
+
+def do_something(scheduler): 
+    scheduler.enter(60, 1, do_something, (scheduler,))
+    print("Checking directory...")
+    tryParse()
+
+my_scheduler = sched.scheduler(time.time, time.sleep)
+my_scheduler.enter(0, 1, do_something, (my_scheduler,))
+my_scheduler.run()
