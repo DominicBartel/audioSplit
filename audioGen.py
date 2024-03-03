@@ -17,24 +17,26 @@ TEXTFOLDER = "textFiles/"
 TEXTCOMPLETE = "textComplete/"
 
 
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--text', type=str, help='Text to speak.', default="The expressiveness of autoregressive transformers is literally nuts! I absolutely adore them.")
-# parser.add_argument('--voice', type=str, help='Selects the voice to use for generation. See options in voices/ directory (and add your own!) '
-#                                                 'Use the & character to join two voices together. Use a comma to perform inference on multiple voices.', default='random')
-# parser.add_argument('--preset', type=str, help='Which voice preset to use.', default='high_quality')
-# parser.add_argument('--use_deepspeed', type=str, help='Which voice preset to use.', default=False)
-# parser.add_argument('--kv_cache', type=bool, help='If you disable this please wait for a long a time to get the output', default=True)
-# parser.add_argument('--half', type=bool, help="float16(half) precision inference if True it's faster and take less vram and ram", default=True)
-# parser.add_argument('--output_path', type=str, help='Where to store outputs.', default='results/')
-# parser.add_argument('--model_dir', type=str, help='Where to find pretrained model checkpoints. Tortoise automatically downloads these to .models, so this'
-#                                                     'should only be specified if you have custom checkpoints.', default=MODELS_DIR)
-# parser.add_argument('--candidates', type=int, help='How many output candidates to produce per-voice.', default=3)
-# parser.add_argument('--seed', type=int, help='Random seed which can be used to reproduce results.', default=None)
-# parser.add_argument('--produce_debug_state', type=bool, help='Whether or not to produce debug_state.pth, which can aid in reproducing problems. Defaults to true.', default=True)
-# parser.add_argument('--cvvp_amount', type=float, help='How much the CVVP model should influence the output.'
-#                                                           'Increasing this can in some cases reduce the likelihood of multiple speakers. Defaults to 0 (disabled)', default=.0)
+parser = argparse.ArgumentParser()
+parser.add_argument('--text', type=str, help='Text to speak.', default="The expressiveness of autoregressive transformers is literally nuts! I absolutely adore them.")
+parser.add_argument('--voice', type=str, help='Selects the voice to use for generation. See options in voices/ directory (and add your own!) '
+                                                'Use the & character to join two voices together. Use a comma to perform inference on multiple voices.', default='random')
+parser.add_argument('--preset', type=str, help='Which voice preset to use.', default='high_quality')
+parser.add_argument('--use_deepspeed', type=str, help='Which voice preset to use.', default=False)
+parser.add_argument('--kv_cache', type=bool, help='If you disable this please wait for a long a time to get the output', default=True)
+parser.add_argument('--half', type=bool, help="float16(half) precision inference if True it's faster and take less vram and ram", default=True)
+parser.add_argument('--output_path', type=str, help='Where to store outputs.', default=RESULTFOLDER)
+parser.add_argument('--model_dir', type=str, help='Where to find pretrained model checkpoints. Tortoise automatically downloads these to .models, so this'
+                                                    'should only be specified if you have custom checkpoints.', default=MODELS_DIR)
+parser.add_argument('--candidates', type=int, help='How many output candidates to produce per-voice.', default=1)
+parser.add_argument('--seed', type=int, help='Random seed which can be used to reproduce results.', default=None)
+parser.add_argument('--produce_debug_state', type=bool, help='Whether or not to produce debug_state.pth, which can aid in reproducing problems. Defaults to true.', default=True)
+parser.add_argument('--cvvp_amount', type=float, help='How much the CVVP model should influence the output.'
+                                                          'Increasing this can in some cases reduce the likelihood of multiple speakers. Defaults to 0 (disabled)', default=.0)
 
-# args = parser.parse_args()
+args = parser.parse_args()
+os.makedirs(args.output_path, exist_ok=True)
+tts = TextToSpeech(models_dir=args.model_dir, use_deepspeed=args.use_deepspeed, kv_cache=args.kv_cache, half=args.half)
 
 abbreviations_dict = {
     "aita": "am i the asshole",
@@ -73,7 +75,7 @@ abbreviations_dict = {
     'RTFM': 'Read The Freaking Manual',
     'NSFL': 'Not Safe For Life',
     'OT': 'Off Topic',
-    'PS': 'Post Scriptum',
+    # 'PS': 'Post Scriptum',
     'TIFU': 'Today I F*cked Up',
     'WIP': 'Work In Progress',
     'WTF': 'What The F*ck',
@@ -82,14 +84,15 @@ abbreviations_dict = {
     'SFW': 'Safe For Work'
 }
 
-# os.makedirs(args.output_path, exist_ok=True)
-# tts = TextToSpeech(models_dir=args.model_dir, use_deepspeed=args.use_deepspeed, kv_cache=args.kv_cache, half=args.half)
-
+swaer = {
+    "fuck": "duck",
+}
 def tryParse():
     onlyfiles = os.listdir(TEXTFOLDER)
     print("Files in dir: " + str(len(onlyfiles)))
     if len(onlyfiles) > 0:
         filename = onlyfiles[0]
+        fileText = filename.split(".")[0]
         with open(os.path.join(TEXTFOLDER, filename)) as file:
             sayString = file.read()
 
@@ -99,27 +102,33 @@ def tryParse():
                 sayString = sayString.lower().replace(" " + x.lower() + ".", abbreviations_dict[x].lower() )
                 sayString = sayString.lower().replace(" " + x.lower() + "!", abbreviations_dict[x].lower() )
 
-            print(sayString)
+            for x in swaer:
+                sayString = sayString.lower().replace(x.lower(), abbreviations_dict[x].lower() )
+            
             allStrings = re.split("\.|\?|\!|\r|\n", sayString)
-            print(allStrings)
+
             while("" in allStrings):
                 allStrings.remove("")
-            print(allStrings)
-            # selected_voice = ["train_lescault","train_dreams"]
-            # voice_samples, conditioning_latents = load_voices(selected_voice)
 
-            # for k, string in enumerate(allStrings):
-            #     gen, dbg_state = tts.tts_with_preset(string, k=args.candidates, voice_samples=voice_samples, conditioning_latents=conditioning_latents,
-            #                                     preset=args.preset, use_deterministic_seed=args.seed, return_deterministic_state=True, cvvp_amount=args.cvvp_amount)
-            #     if isinstance(gen, list):
-            #         for j, g in enumerate(gen):
-            #             torchaudio.save(os.path.join(args.output_path, f'{k}_{selected_voice}_{j}.wav'), g.squeeze(0).cpu(), 24000)
-            #     else:
-            #         torchaudio.save(os.path.join(args.output_path, f'{k}_{selected_voice}_.wav'), gen.squeeze(0).cpu(), 24000)
+            filePath = os.path.join(RESULTFOLDER, fileText)
+            if not os.path.exists(filePath):
+                os.makedirs(filePath)
 
-            #     if args.produce_debug_state:
-            #             os.makedirs('debug_states', exist_ok=True)
-            #             torch.save(dbg_state, f'debug_states/do_tts_debug_{selected_voice}.pth')
+            selected_voice = ["train_lescault"]
+            voice_samples, conditioning_latents = load_voices(selected_voice)
+
+            for k, string in enumerate(allStrings):
+                gen, dbg_state = tts.tts_with_preset(string, k=args.candidates, voice_samples=voice_samples, conditioning_latents=conditioning_latents,
+                                                preset=args.preset, use_deterministic_seed=args.seed, return_deterministic_state=True, cvvp_amount=args.cvvp_amount)
+                if isinstance(gen, list):
+                    for j, g in enumerate(gen):
+                        torchaudio.save(os.path.join(filePath, f'{k}_{selected_voice}_{j}.wav'), g.squeeze(0).cpu(), 24000)
+                else:
+                    torchaudio.save(os.path.join(filePath, f'{k}_{selected_voice}_.wav'), gen.squeeze(0).cpu(), 24000)
+
+                if args.produce_debug_state:
+                        os.makedirs('debug_states', exist_ok=True)
+                        torch.save(dbg_state, f'debug_states/do_tts_debug_{selected_voice}.pth')
 
             file.close()
 
@@ -129,7 +138,7 @@ def tryParse():
 
 
 def do_something(scheduler): 
-    scheduler.enter(60, 1, do_something, (scheduler,))
+    scheduler.enter(300, 1, do_something, (scheduler,))
     print("Checking directory...")
     tryParse()
 
